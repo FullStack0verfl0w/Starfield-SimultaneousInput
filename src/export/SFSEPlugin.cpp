@@ -142,10 +142,11 @@ extern "C" DLLEXPORT bool SFSEAPI SFSEPlugin_Load(const SFSE::LoadInterface* a_s
 	{
 		auto hook = REL::Relocation<std::uintptr_t>(
 			RE::Offset::BSPCGamepadDevice::Poll,
-			0x2A0);
-
+			0x281);
 		REL::Pattern<"C6 43 08 01">().match_or_fail(hook.address());
-		REL::safe_fill(hook.address(), REL::NOP, 0x4);
+
+		const std::uint8_t data[] = { 0xC6, 0x43, 0x08, 0x0 };
+		REL::safe_write(hook.address(), std::span<const std::uint8_t>(data));
 	}
 
 	{
@@ -153,20 +154,18 @@ extern "C" DLLEXPORT bool SFSEAPI SFSEPlugin_Load(const SFSE::LoadInterface* a_s
 			// Fix slow movement on 2 quadrants?
 			std::make_pair(RE::Offset::PlayerControls::LookHandler::Func10, 0xE),
 			// Fix look sensitivity
-			std::make_pair(RE::Offset::PlayerControls::Manager::ProcessLookInput, 0x68),
+			std::make_pair(RE::Offset::PlayerControls::Manager::ProcessLookInput, 0x81),
 			// Prevent cursor from escaping window
 			std::make_pair(RE::Offset::Main::Run_WindowsMessageLoop, 0x39),
 			// Fix mouse movement for ship reticle
-			std::make_pair(RE::Offset::ShipHudDataModel::PerformInputProcessing, 0x7AF),
-			std::make_pair(RE::Offset::ShipHudDataModel::PerformInputProcessing, 0x82A),
+			std::make_pair(RE::Offset::ShipHudDataModel::PerformInputProcessing, 0x842),
+			std::make_pair(RE::Offset::ShipHudDataModel::PerformInputProcessing, 0x8BD),
 		};
 
 		auto& trampoline = SFSE::GetTrampoline();
 		for (auto [id, offset] : hookLocs) {
 			auto hook = REL::Relocation<std::uintptr_t>(id, offset);
-
 			REL::Pattern<"E8">().match_or_fail(hook.address());
-
 			trampoline.write_call<5>(hook.address(), IsUsingThumbstickLook);
 		}
 	}
